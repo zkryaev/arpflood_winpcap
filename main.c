@@ -6,7 +6,8 @@
 int main() {
     init_random();
 
-    pcap_if_t *device = selectDevice();  // The device to sniff on
+    pcap_if_t *all_devices = NULL;
+    pcap_if_t *device = selectDevice(&all_devices);  // The device to sniff on
     if (device == NULL) {
         printf("ERROR: device not found!\n");
         return 0;
@@ -34,11 +35,13 @@ int main() {
     }
 
     performArpFloodAttack(device, src_mac, src_ip, num_packets_to_send);
-
+    //device = NULL;
     free(src_mac);
     for (int i = 0; i < len_list; i++) {
         free(ipv4list[i]);
     }
     free(ipv4list);
+    device = NULL;
+    pcap_freealldevs(all_devices);
     return 0;
 }
