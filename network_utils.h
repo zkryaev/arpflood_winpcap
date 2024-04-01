@@ -6,7 +6,7 @@
 #include "address_fetchers.h"
 #include "display_functions.h"
 
-pcap_if_t *selectDevice();
+pcap_if_t *selectDevice(pcap_if_t ** all_devices);
 
 void buildEthernetHeader(struct ether_hdr *ether_header, unsigned char *src_mac, unsigned char *dst_mac);
 
