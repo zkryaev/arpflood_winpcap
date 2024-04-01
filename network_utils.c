@@ -1,18 +1,17 @@
 #include "network_utils.h"
 
-pcap_if_t *selectDevice() {
-    pcap_if_t *all_devices;
+pcap_if_t *selectDevice(pcap_if_t ** all_devices) {
     pcap_if_t *d;
     int selected_dev_num = 0;
     int i = 0;
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    if (pcap_findalldevs_ex(PCAP_SRC_IF_STRING, NULL, &all_devices, errbuf) == -1) {
+    if (pcap_findalldevs_ex(PCAP_SRC_IF_STRING, NULL, &(*all_devices), errbuf) == -1) {
         fprintf(stderr, "Error in pcap_findalldevs_ex: %s\n", errbuf);
         exit(1);
     }
 
-    for (d = all_devices; d; d = d->next) {
+    for (d = (*all_devices); d; d = d->next) {
         if (d->description)
             printf("%d (%s)\n", ++i, d->description);
     }
@@ -26,17 +25,17 @@ pcap_if_t *selectDevice() {
     printf("Enter the interface number (1-%d):", i);
     if (scanf_s("%d", &selected_dev_num) <= 0) {
         printf("ERROR: not a number!\n");
-        pcap_freealldevs(all_devices);
+        pcap_freealldevs((*all_devices));
         return NULL;
     }
     if (selected_dev_num < 1 || selected_dev_num > i) {
         printf("\nInterface number out of range.\n");
-        pcap_freealldevs(all_devices);
+        pcap_freealldevs((*all_devices));
         return NULL;
     }
 
     // selecting device
-    for (d = all_devices, i = 0; i < selected_dev_num - 1; i++, d = d->next);
+    for (d = (*all_devices), i = 0; i < selected_dev_num - 1; i++, d = d->next);
 
     return d;
 }
