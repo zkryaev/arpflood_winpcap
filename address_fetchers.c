@@ -99,7 +99,8 @@ void generateRandomMAC(unsigned char *mac) {
 }
 
 void generateRandomIPv4(unsigned char *ip) {
-    for (int i = 0; i < 4; i++) {
-        ip[i] = (unsigned char) (rand() % 256);
-    }
+    ip[0] = 192;
+    ip[1] = 162;
+    ip[2] = (unsigned char) (rand() % 256);
+    ip[3] = (unsigned char) (rand() % 256);
 }
