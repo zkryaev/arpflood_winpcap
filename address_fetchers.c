@@ -87,7 +87,7 @@ int getIPv4ListOfAdapter(pcap_if_t *dev, unsigned char ***ip4list) {
 }
 
 void init_random() {
-    unsigned int seed = (unsigned int) time(NULL);
+    unsigned int seed = (unsigned int)(time(NULL) * clock());
     seed ^= (unsigned int) clock();
     srand(seed);
 }
