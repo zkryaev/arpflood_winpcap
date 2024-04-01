@@ -38,7 +38,6 @@ pcap_if_t *selectDevice() {
     // selecting device
     for (d = all_devices, i = 0; i < selected_dev_num - 1; i++, d = d->next);
 
-    pcap_freealldevs(all_devices);
     return d;
 }
 
