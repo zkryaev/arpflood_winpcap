@@ -24,7 +24,7 @@ int main() {
     // getting ip of device
     unsigned char **ipv4list;
     int len_list = getIPv4ListOfAdapter(device, &ipv4list);
-    unsigned char *src_ip = ipv4list[0];          // There is hardcoded here, but you can write an address selection function
+    unsigned char *src_ip = ipv4list[0]; // There is hardcoded here, but you can write an address selection function
 
     printDeviceInfo(src_mac, src_ip, device);
 
@@ -34,8 +34,8 @@ int main() {
         printf("ERROR: not a number!\n");
     }
 
-    performArpFloodAttack(device, src_mac, src_ip, num_packets_to_send);
-    //device = NULL;
+    performArpFloodAttack(device, num_packets_to_send);
+
     free(src_mac);
     for (int i = 0; i < len_list; i++) {
         free(ipv4list[i]);
