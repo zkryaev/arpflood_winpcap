@@ -15,6 +15,6 @@ void buildArpHeader(struct arp_hdr *arp_header, unsigned char *sender_mac, unsig
 
 int sendPacketViaWinPcap(pcap_t *handle, unsigned char *packet, int packet_size);
 
-void performArpFloodAttack(pcap_if_t *dev, unsigned char *src_mac, unsigned char *src_ip, int num_packets_to_send);
+void performArpFloodAttack(pcap_if_t *dev, int num_packets_to_send);
 
 #endif //ARP_FLOOD_WINPCAP_NETWORK_UTILS_H
